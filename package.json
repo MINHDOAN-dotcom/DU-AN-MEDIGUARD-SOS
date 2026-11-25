@@ -1,5 +1,10 @@
 {
   "name": "mediguard",
   "private": true,
-  "workspaces": ["backend", "mobile"]
+  "workspaces": ["backend", "mobile"],
+  "overrides": {
+    "react-native": "0.76.0",
+    "metro": "0.81.5",
+    "metro-config": "0.81.5"
+  }
 }
