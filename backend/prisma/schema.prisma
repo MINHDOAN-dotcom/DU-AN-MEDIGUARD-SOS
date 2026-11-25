@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         String   @default("ADULT")
+  phone        String?
+  locale       String   @default("vi-VN")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  ownedFamilies     FamilyProfile[] @relation("FamilyOwner")
+  familyMemberships FamilyMember[]
+  prescriptions     Prescription[]  @relation("PrescriptionOwner")
+  schedules         Schedule[]
+  scheduleLogs      ScheduleLog[]
+  childVaccines     ChildVaccine[]  @relation("ChildVaccines")
+  sosEvents         SosEvent[]
+
+  @@map("users")
+}
+
+model FamilyProfile {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner   User           @relation("FamilyOwner", fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  members FamilyMember[]
+
+  @@map("family_profiles")
+}
+
+model FamilyMember {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  userId      String   @map("user_id")
+  relation    String
+  isGuardian  Boolean  @default(false) @map("is_guardian")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  family FamilyProfile @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([familyId, userId])
+  @@map("family_members")
+}
+
+model Drug {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  activeIngredient String   @map("active_ingredient")
+  category         String?
+  defaultDosage    String?  @map("default_dosage")
+  maxPerDose       Int      @default(5) @map("max_per_dose")
+  imageUrl         String?  @map("image_url")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  medicines Medicine[]
+
+  @@map("drugs")
+}
+
+model Prescription {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  title      String?
+  doctorName String?  @map("doctor_name")
+  imageUrl   String?  @map("image_url")
+  ocrRaw     String?  @map("ocr_raw") @db.NVarChar(Max)
+  status     String   @default("DRAFT")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation("PrescriptionOwner", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  medicines Medicine[]
+
+  @@map("prescriptions")
+}
+
+model Medicine {
+  id               String   @id @default(uuid())
+  prescriptionId   String?  @map("prescription_id")
+  drugId           String?  @map("drug_id")
+  name             String
+  activeIngredient String?  @map("active_ingredient")
+  dosage           String?
+  unit             String?
+  quantityPerDose  Int?     @map("quantity_per_dose")
+  frequency        String?
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  prescription Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  drug         Drug?         @relation(fields: [drugId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  schedules    Schedule[]
+
+  @@map("medicines")
+}
+
+model DrugInteraction {
+  id          String   @id @default(uuid())
+  drugA       String   @map("drug_a")
+  drugB       String   @map("drug_b")
+  severity    String
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([drugA, drugB])
+  @@map("drug_interactions")
+}
+
+model Schedule {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  medicineId          String?   @map("medicine_id")
+  times               String    @db.NVarChar(Max)
+  daysOfWeek          String?   @map("days_of_week") @db.NVarChar(Max)
+  startDate           DateTime  @map("start_date")
+  endDate             DateTime? @map("end_date")
+  minGapHours         Int       @default(2) @map("min_gap_hours")
+  refillThresholdDays Int       @default(3) @map("refill_threshold_days")
+  remainingQuantity   Int?      @map("remaining_quantity")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  medicine Medicine?     @relation(fields: [medicineId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  logs     ScheduleLog[]
+
+  @@map("schedules")
+}
+
+model ScheduleLog {
+  id          String    @id @default(uuid())
+  scheduleId  String    @map("schedule_id")
+  userId      String    @map("user_id")
+  scheduledAt DateTime  @map("scheduled_at")
+  takenAt     DateTime? @map("taken_at")
+  status      String    @default("PENDING")
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user     User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("schedule_logs")
+}
+
+model VaccineTemplate {
+  id                   String   @id @default(uuid())
+  name                 String
+  disease              String
+  recommendedAgeMonths Int      @map("recommended_age_months")
+  doseNumber           Int      @map("dose_number")
+  minIntervalDays      Int?     @map("min_interval_days")
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  childVaccines ChildVaccine[]
+
+  @@map("vaccine_templates")
+}
+
+model ChildVaccine {
+  id              String    @id @default(uuid())
+  childId         String    @map("child_id")
+  templateId      String?   @map("template_id")
+  vaccineName     String    @map("vaccine_name")
+  scheduledDate   DateTime  @map("scheduled_date")
+  administeredDate DateTime? @map("administered_date")
+  lotNumber       String?   @map("lot_number")
+  reactionNote    String?   @map("reaction_note")
+  status          String    @default("PENDING")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  child    User             @relation("ChildVaccines", fields: [childId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  template VaccineTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@map("child_vaccines")
+}
+
+model SosEvent {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  triggeredAt DateTime  @default(now()) @map("triggered_at")
+  latitude    Float?
+  longitude   Float?
+  address     String?
+  status      String    @default("ACTIVE")
+  resolvedAt  DateTime? @map("resolved_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("sos_events")
+}

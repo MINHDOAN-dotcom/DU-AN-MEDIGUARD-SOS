@@ -1,0 +1,5 @@
+{
+  "name": "mediguard",
+  "private": true,
+  "workspaces": ["backend", "mobile"]
+}

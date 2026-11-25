@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "MediGuard",
+    "slug": "mediguard",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CALL_PHONE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "USE_FULL_SCREEN_INTENT",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACTIVITY_RECOGNITION"
+      ],
+      "package": "com.mediguard.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sensors",
+      "expo-location",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-speech"
+    ],
+    "scheme": "mediguard",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
